@@ -19,20 +19,10 @@ sub sampleProcedure {
     my $context = $pluginObject->newContext();
     print "Current context is: ", $context->getRunContext(), "\n";
     my $params = $context->getStepParameters();
-    # print Dumper $params;
-
-    # print $params->isParameterExists('config'), "\n";
-    my $headers = $params->getParameter('request_headers');
-    my $config = $params->getParameter('config');
-
-
-    # print Dumper $headers;
-    # print Dumper $config;
-    printf "Config: %s, headers: %s\n", $config->getValue(), $headers->getValue();
+    print Dumper $params;
 
     my $configValues = $context->getConfigValues();
-
-    # print Dumper $configValues;
+    print Dumper $configValues;
 
     my $stepResult = $context->newStepResult();
     print "Created stepresult\n";

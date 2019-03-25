@@ -60,6 +60,7 @@ procedures:
     documentation: Some checkbox
     checkedValue: true
     uncheckedValue: false
+    type: checkbox
     label: Checkbox
   outputParameters:
     deployed: JSON representation of the deployed application

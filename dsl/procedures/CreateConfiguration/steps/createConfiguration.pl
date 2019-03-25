@@ -1,3 +1,5 @@
+
+## === createConfiguration starts ===
 #
 #  Copyright 2016 Electric Cloud, Inc.
 #
@@ -63,6 +65,7 @@ if ($stepsJSON) {
 my $configName = '$[config]';
 
 eval {
+    my $opts = getActualParameters();
     for my $param ($ec->getFormalParameters({
         projectName => $projName,
         procedureName => 'CreateConfiguration',
@@ -70,9 +73,11 @@ eval {
         my $type = $param->findvalue('type') . '';
         if ($type eq 'credential') {
             my $required = $param->findvalue('required') . '';
-            my $credentialName = $param->findvalue('formalParameterName') . '';
+            my $fieldName = $param->findvalue('formalParameterName') . '';
+            my $credentialName = $opts->{$fieldName};
+
             eval {
-                createAndAttachCredential($credentialName, $configPropertySheet,$configName, $steps);
+                createAndAttachCredential($credentialName, $configName, $configPropertySheet, $steps);
                 1;
             } or do {
                 my $err = $@;
@@ -108,21 +113,23 @@ sub createAndAttachCredential {
 
     my $projName = '$[/myProject/projectName]';
 
+    my $credObjectName = $credName eq 'credential' ? $configName : "${configName}_${credName}";
+    # die $credObjectName;
     # Create credential
-    $ec->deleteCredential($projName, $credName);
-    $xpath = $ec->createCredential($projName, $credName, $clientID, $clientSecret);
+    $ec->deleteCredential($projName, $credObjectName);
+    $xpath = $ec->createCredential($projName, $credObjectName, $clientID, $clientSecret);
     $errors .= $ec->checkAllErrors($xpath);
 
     # Give config the credential's real name
     my $configPath = "/projects/$projName/$configPropertySheet/$configName/$credName";
-    $xpath = $ec->setProperty($configPath . "/credential", $credName);
+    $xpath = $ec->setProperty($configPath, $credObjectName);
     $errors .= $ec->checkAllErrors($xpath);
 
     # Give job launcher full permissions on the credential
     my $user = '$[/myJob/launchedByUser]';
     $xpath = $ec->createAclEntry("user", $user, {
         projectName => $projName,
-        credentialName => $credName,
+        credentialName => $credObjectName,
         readPrivilege => 'allow',
         modifyPrivilege => 'allow',
         executePrivilege => 'allow',
@@ -132,7 +139,7 @@ sub createAndAttachCredential {
     # Attach credential to steps that will need it
     for my $step( @$steps ) {
         print "Attaching credential to procedure " . $step->{procedureName} . " at step " . $step->{stepName} . "\n";
-        my $apath = $ec->attachCredential($projName, $credName,
+        my $apath = $ec->attachCredential($projName, $credObjectName,
                                         {procedureName => $step->{procedureName},
                                          stepName => $step->{stepName}});
         $errors .= $ec->checkAllErrors($apath);
@@ -141,7 +148,7 @@ sub createAndAttachCredential {
     if ("$errors" ne "") {
         # Cleanup the partially created configuration we just created
         $ec->deleteProperty($configPath);
-        $ec->deleteCredential($projName, $credName);
+        $ec->deleteCredential($projName, $credObjectName);
         my $errMsg = "Error creating configuration credential: " . $errors;
         $ec->setProperty("/myJob/configError", $errMsg);
         die $errMsg;
@@ -157,12 +164,8 @@ sub rollback {
     }
 }
 
-sub createConfigurationPropertySheet {
-    my ($configPropertySheet) = @_;
 
-    ## load option list from procedure parameters
-    my $ec = ElectricCommander->new;
-    $ec->abortOnError(0);
+sub getActualParameters {
     my $x       = $ec->getJobDetails($ENV{COMMANDER_JOBID});
     my $nodeset = $x->find('//actualParameter');
     my $opts;
@@ -172,6 +175,18 @@ sub createConfigurationPropertySheet {
         my $val  = $node->findvalue('value');
         $opts->{$parm} = "$val";
     }
+    return $opts;
+}
+
+sub createConfigurationPropertySheet {
+    my ($configPropertySheet) = @_;
+
+    ## load option list from procedure parameters
+    my $ec = ElectricCommander->new;
+    $ec->abortOnError(0);
+    my $x       = $ec->getJobDetails($ENV{COMMANDER_JOBID});
+    my $nodeset = $x->find('//actualParameter');
+    my $opts = getActualParameters();
 
     if (!defined $opts->{config} || "$opts->{config}" eq "") {
         die "config parameter must exist and be non-blank\n";
@@ -197,8 +212,7 @@ sub createConfigurationPropertySheet {
         $cfg->setCol("$opts->{config}", "$key", "$opts->{$key}");
     }
 }
-
-
-# == auto-generated code ends
+## === createConfiguration ends, checksum: 40eca5208336ab27301980ab4f18797f ===
 # user-defined code can be placed below this line
 # Do not edit the code above the line as it will be updated upon plugin upgrade
+# something

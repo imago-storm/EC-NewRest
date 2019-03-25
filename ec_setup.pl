@@ -1,5 +1,5 @@
-# This is auto-generated ec_setup file provided for you by ecpdf utility <3
-# Please do not edit this code manually, if you need to write your own code, please add it in the end of this file
+
+## === ec_setup starts ===
 use Cwd;
 use File::Spec;
 use POSIX;
@@ -153,11 +153,4 @@ $commander->setProperty( "/plugins/$pluginName/project/logs/$nowString", { value
 die $errorMessage unless !$errorMessage;
 
 # Please do not remove the line below, it marks the auto-generated code and is used by the ecpdf tool
-# == auto-generated code ends ===
-# This part was auto-generated
-# Please place your custom code between two markers below:
-# EC Setup Custom Starts
-
-# print "my custom code";
-
-# EC Setup Custom Ends
+## === ec_setup ends, checksum: e24a71d3e7ab3ad53cbc4922175deb75 ===

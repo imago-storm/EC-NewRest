@@ -18,11 +18,10 @@ Please not not edit this file manually as it will be regenerated.
     <label>Application Path</label>
   </formElement>
   <formElement>
-    <type>entry</type>
+    <type>checkbox</type>
     <property>check</property>
     <documentation>Some checkbox</documentation>
     <label>Checkbox</label>
-    <property>check</property>
     <checkedValue>true</checkedValue>
     <uncheckedValue>false</uncheckedValue>
   </formElement>

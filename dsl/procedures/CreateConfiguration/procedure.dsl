@@ -1,5 +1,6 @@
 import java.io.File
 
+// This file was automatically generated. It will not be regenerated upon subsequent updates.
 procedure 'CreateConfiguration', description: 'Creates a plugin configuration', {
 
 
@@ -19,5 +20,4 @@ procedure 'CreateConfiguration', description: 'Creates a plugin configuration', 
         releaseMode: 'none',
         shell: 'ec-perl',
         timeLimitUnits: 'minutes'
-
 }
