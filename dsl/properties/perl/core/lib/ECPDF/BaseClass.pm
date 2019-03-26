@@ -54,9 +54,9 @@ sub __get {
         $rv = $object->{$field};
         return $rv;
     }
-
+    # TODO: improve error handling here.
     # if ($opts->{nonFatal}) {
-    croak "Field $field does not exist";
+    # croak "Field $field does not exist";
     #}
     return undef;
 }

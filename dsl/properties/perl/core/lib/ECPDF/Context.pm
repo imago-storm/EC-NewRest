@@ -1,4 +1,20 @@
 package ECPDF::Context;
+
+=head1 NAME
+
+ECPDF::Context
+
+=head1 DESCRIPTION
+
+ECPDF::Context is a class that represents current running context.
+
+This class allows user to access procedure parameters, config values and define a step result.
+
+=head1 METHODS
+
+=cut
+
+
 use base qw/ECPDF::BaseClass/;
 use strict;
 use warnings;
@@ -8,6 +24,8 @@ use ECPDF::StepParameters;
 use ECPDF::Parameter;
 use ECPDF::Credential;
 use ECPDF::StepResult;
+use ECPDF::Log;
+
 use Carp;
 use Data::Dumper;
 use ElectricCommander;
@@ -23,13 +41,24 @@ sub classDefinition {
     };
 }
 
-# sub new {
-#     my ($self, $params) = @_;
+=over 
 
-#     if (!$params->{ec}) {
-#         $params->{ec} = ElectricCommander->new();
-#     }
-# }
+=item B<getStepParameters>
+
+Returns a L<ECPDF::StepParameters> object to be used as accessor for current step parameters.
+This method does not require parameters.
+
+    my $params = $context->getStepParameters();
+    # this method returns a L<ECPDF::Parameter> object, or undef, if no parameter with that name has been found.
+    my $param = $params->getParameter('myStepParameter');
+    if ($param) {
+        print "Param value is:", $param->getValue(), "\n";
+    }
+
+=back
+
+=cut
+
 sub getStepParameters {
     my ($context) = @_;
 
@@ -42,7 +71,24 @@ sub getStepParameters {
     my $parameters = {};
     for my $k (keys %$stepParametersHash) {
         push @{$parametersList}, $k;
-        my $p = ECPDF::Parameter->new({name => $k, value => $stepParametersHash->{$k}});
+        my $p;
+        if (!ref $stepParametersHash->{$k}) {
+            $p = ECPDF::Parameter->new({
+                name  => $k,
+                value => $stepParametersHash->{$k}
+            });
+        }
+        else {
+            # it is a hash reference, so it is credential
+            my $value = ECPDF::Credential->new({
+                credentialName => $k,
+                # TODO: Change it to something more reliable later.
+                # Currently we have support of default credentials only.
+                credentialType => 'default',
+                userName => $stepParametersHash->{$k}->{userName},
+                secretValue => $stepParametersHash->{$k}->{password},
+            });
+        }
         $parameters->{$k} = $p;
     }
 
@@ -55,13 +101,28 @@ sub getStepParameters {
     return $stepParameters;
 }
 
+=over
+
+=item B<getConfigValues>
+
+This method returns a L<ECPDF::Config> object that represents plugin configuration. This method does not require parameters.
+
+    my $configValues = $context->getConfigValues();
+    my $cred = $configValues->getParameter('credential');
+    if ($cred) {
+        print "Secret value is: ", $cred->getSecretValue(), "\n";
+    }
+
+=back
+
+=cut
 
 sub getConfigValues {
     my ($context) = @_;
 
     my $stepParameters = $context->getStepParameters();
     my $po = $context->getPluginObject();
-    print "Got plugin object:", Dumper $po;
+    logTrace("Plugin Object: ", Dumper $po);
     my $configLocations = $po->getConfigLocations();
     my $configFields    = $po->getConfigFields();
 
@@ -113,8 +174,8 @@ sub getConfigValues {
                 credentialName => $k,
                 # TODO: Change it to something more reliable later.
                 credentialType => 'default',
-                userName => $configValuesHash->{$k}->{userName},
-                secretValue => $configValuesHash->{$k}->{password},
+                userName => $configHash->{$k}->{userName},
+                secretValue => $configHash->{$k}->{password},
             });
             $configValuesHash->{$k} = $value;
         }
@@ -142,7 +203,7 @@ sub retrieveConfigByNameAndLocation {
     my $config_fields = $po->getConfigFields();
 
     my $config_property_sheet = sprintf("/projects/%s/%s/%s", $plugin_project_name, $configLocation, $configName);
-    print "Config property sheet: $config_property_sheet\n";
+    logDebug("Config property sheet: $config_property_sheet");
     my $property_sheet_id = eval { $self->getEc->getProperty($config_property_sheet)->findvalue('//propertySheetId')->string_value };
     if ($@) {
         return undef;
@@ -153,42 +214,39 @@ sub retrieveConfigByNameAndLocation {
     for my $node ( $properties->findnodes('//property')) {
         my $value = $node->findvalue('value')->string_value;
         my $name = $node->findvalue('propertyName')->string_value;
-        $retval->{$name} = $value;
-
-
-        if ($name =~ /proxy_credential/) {
-            # Proxy credential can exist not, and EC will fail. Avoiding
-            my $saved_abort_on_error_value = $self->getEc->abortOnError();
-            eval {
-                $self->getEc->abortOnError(0);
-                my $credentials = $self->getEc->getFullCredential($configName . '_proxy_credential');
-                my $user_name = $credentials->findvalue('//userName')->string_value;
-                my $password = $credentials->findvalue('//password')->string_value;
-
-                $retval->{proxy_credential}->{userName} = $user_name;
-                $retval->{proxy_credential}->{password} = $password;
-            } or do {
-                print "Can't get proxy credential: $@ \n";
-            };
-
-            # Restore value
-            $self->getEc()->abortOnError($saved_abort_on_error_value);
-        }
-        elsif ($name =~ /credential/) {
+        if ($name =~ m/_?credential$/s) {
             my $credentials = $self->getEc->getFullCredential($configName);
             my $user_name = $credentials->findvalue('//userName')->string_value;
             my $password = $credentials->findvalue('//password')->string_value;
-            print "RETVAL:", Dumper $retval;
-            $retval->{credential} = {};
-            $retval->{credential}->{userName} = $user_name;
-            $retval->{credential}->{password} = $password;
+            # $retval->{$name} = {};
+            $retval->{$name}->{userName} = $user_name;
+            $retval->{$name}->{password} = $password;
+        }
+        else {
+            $retval->{$name} = $value;
         }
 
     }
 
+    print "Retval", Dumper $retval;
     return $retval;
 
 }
+
+=over
+
+=item B<newStepResult>
+
+This method returns an L<ECPDF::StepResult> object, which is being used to work with procedure output.
+
+    my $stepResult = $context->newStepResult();
+    ...;
+    $stepResult->apply();
+
+=back
+
+=cut
+
 sub newStepResult {
     my ($self) = @_;
 
@@ -244,7 +302,7 @@ sub buildRunContext {
         $scheduleName = $self->getCurrentScheduleName();
         1;
     } or do {
-        print "error occured: $@\n";
+        logError("error occured: $@");
     };
 
     if ($scheduleName) {
@@ -266,12 +324,12 @@ sub getCurrentScheduleName {
         $scheduleName = $result->findvalue('//scheduleName')->string_value();
         if ($scheduleName) {
             # $self->logger()->info('Schedule found: ', $scheduleName);
-            print "Schedule found: $scheduleName\n";
+            logDebug("Schedule found: $scheduleName");
         };
         1;
     } or do {
         # $self->logger()->error($@);
-        print "Error: $@\n";
+        logError("Error: $@");
     };
 
     return $scheduleName;
@@ -281,7 +339,7 @@ sub getCurrentStepParameters {
     # return $self->get_step_parameters();
 }
 
-sub read_actual_parameter {
+sub readActualParameter {
     my ($self, $param) = @_;
 
     my $ec = $self->getEc();
@@ -345,11 +403,11 @@ sub get_param {
 
     my $retval;
     eval {
-        $retval = $self->read_actual_parameter($param);
-        print qq{Got parameter "$param" with value "$retval"\n};
+        $retval = $self->readActualParameter($param);
+        logInfo(qq{Got parameter "$param" with value "$retval"\n});
         1;
     } or do {
-        print "Error '$@' was occured while getting property: $param";
+        logError("Error '$@' was occured while getting property: $param");
         $retval = undef;
     };
     return $retval;
@@ -360,28 +418,30 @@ sub getCurrentStepParametersAsHash {
 
     my $params = {};
     my $procedure_name = $self->getEc()->getProperty('/myProcedure/name')->findvalue('//value')->string_value;
-    my $xpath = $self->getEc()->getFormalParameters({projectName => '@PLUGIN_NAME@', procedureName => $procedure_name});
+    my $po = $self->getPluginObject();
+    my $xpath = $self->getEc()->getFormalParameters({
+        # projectName => '@PLUGIN_NAME@',
+        projectName => sprintf('%s-%s', $po->getPluginName(), $po->getPluginVersion()),
+        procedureName => $procedure_name
+    });
     for my $param ($xpath->findnodes('//formalParameter')) {
         my $name = $param->findvalue('formalParameterName')->string_value;
         my $value = $self->get_param($name);
 
         my $name_in_list = $name;
-        # TODO: Revisit this line
-        # $name_in_list =~ s/ecp_weblogic_//;
         # TODO: Add credentials handling logic. Now we're nexting.
         if ($param->findvalue('type')->string_value eq 'credential') {
-            # my $cred = $self->getEc()->getFullCredential($value);
-            # my $username = $cred->findvalue('//userName')->string_value;
-            # my $password = $cred->findvalue('//password')->string_value;
-
-            # $params->{$name_in_list . 'Username'} = $username;
-            # $params->{$name_in_list . 'Password'} = $password;
+            my $cred = $self->getEc()->getFullCredential($value);
+            my $username = $cred->findvalue('//userName')->string_value;
+            my $password = $cred->findvalue('//password')->string_value;
+            $params->{$name_in_list}->{userName} = $username;
+            $params->{$name_in_list}->{password} = $password;
         }
         else {
             # TODO: Add trim here
             $params->{$name_in_list} = $value;
             # $self->out(1, qq{Got parameter "$name" with value "$value"\n});
-            print qq{Got parameter "$name" with value "$value"\n};
+            logInfo(qq{Got parameter "$name" with value "$value"\n});
         }
     }
     return $params;

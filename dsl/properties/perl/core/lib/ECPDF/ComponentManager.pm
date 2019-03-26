@@ -16,7 +16,7 @@ sub new {
     return $self;
 }
 
-sub load_component_local {
+sub loadComponentLocal {
     my ($self, $component, $params) = @_;
 
     eval "require $component";
@@ -26,7 +26,7 @@ sub load_component_local {
     $self->{components_local}->{$component} = $o;
     return $o;
 }
-sub load_component {
+sub loadComponent {
     my ($self, $component, $params) = @_;
 
     eval "require $component";
@@ -37,7 +37,7 @@ sub load_component {
     return $o;
 }
 
-sub get_component {
+sub getComponent {
     my ($self, $component) = @_;
 
     if (!$COMPONENTS->{$component}) {
@@ -46,7 +46,7 @@ sub get_component {
     return $COMPONENTS->{$component};
 }
 
-sub get_component_local {
+sub getComponentLocal {
     my ($self, $component) = @_;
 
     if (!$self->{components_local}->{$component}) {
@@ -54,4 +54,6 @@ sub get_component_local {
     }
     return $self->{components_local}->{$component};
 }
+
+
 1;

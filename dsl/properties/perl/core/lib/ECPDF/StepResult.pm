@@ -1,10 +1,24 @@
 package ECPDF::StepResult;
+
+=head1 NAME
+
+ECPDF::StepResult
+
+=head1 DESCRIPTION
+
+This class sets various output results of step run.
+
+=head1 METHODS
+
+=cut
+
 use base qw/ECPDF::BaseClass/;
 use strict;
 use warnings;
 use Carp;
 use Data::Dumper;
 use ECPDF::StepResult::Action;
+use ECPDF::Log;
 
 sub classDefinition {
     return {
@@ -13,6 +27,206 @@ sub classDefinition {
         cache => '*'
     };
 }
+
+
+sub getCacheForAction {
+    my ($self, $actionType, $name, $value) = @_;
+
+    my $cache = $self->getCache();
+    if ($cache->{$actionType} && $cache->{$actionType}->{$name}) {
+        return $cache->{$actionType}->{$name};
+    }
+    return '';
+}
+
+sub setCacheForAction {
+    my ($self, $actionType, $name, $value) = @_;
+
+    logDebug("Parameters for set cache: '$actionType', '$name', '$value'");
+    my $cache = $self->getCache();
+    my $line = $value;
+    if ($cache->{$actionType} && $cache->{$actionType}->{$name}) {
+        $line = sprintf("%s\n%s", $line, $value);
+    }
+
+    $cache->{$actionType}->{$name} = $line;
+    return $line;
+}
+
+=over
+
+=item B<setJobStepOutcome>
+
+Schedules setting of a job step outcome. Could be warning, success or an error.
+
+    $stepResult->setJobStepOutcome('warning');
+
+=back
+
+=cut
+
+sub setJobStepOutcome {
+    my ($self, $path, $outcome) = @_;
+
+    # if (!$path || !$outcome) {
+    #     croak "Path and outcome are mandatory for setOutcome function.\n";
+    # }
+    # If only one parameter has been provided, we're setting other parameters.
+    if ($path && !$outcome) {
+        $outcome = $path;
+        $path = '/myJobStep/outcome';
+    }
+    if ($outcome !~ m/^(?:error|warning|success)$/s) {
+        croak "Outcome is expected to be one of: error, warning, success. Got: $outcome\n";
+    }
+    my $action = ECPDF::StepResult::Action->new({
+        actionType  => 'setJobOutcome',
+        entityName  => $path,
+        entityValue => $outcome
+    });
+
+    my $actions = $self->getActions();
+    push @$actions, $action;
+    return $self;
+
+}
+
+
+=over
+
+=item B<setPipelineSummary>
+
+Sets the summary of the current pipeline task.
+
+    $stepResult->setPipelineSummary('Procedure Execution Result:', 'All tests are ok');
+
+=back
+
+=cut
+
+sub setPipelineSummary {
+    my ($self, $pipelineProperty, $pipelineSummary) = @_;
+
+    if (!$pipelineProperty || !$pipelineSummary) {
+        croak "pipelineProperty and pipelineSummary are mandatory.\n";
+    }
+
+    my $action = ECPDF::StepResult::Action->new({
+        actionType  => 'setPipelineSummary',
+        entityName  => '/myPipelineStageRuntime/ec_summary/' . $pipelineProperty,
+        entityValue => $self->setCacheForAction('setPipelineSummary', $pipelineSummary)
+    });
+
+    my $actions = $self->getActions();
+    push @$actions, $action;
+    return $self;
+}
+
+
+=over
+
+=item B<setJobStepSummary>
+
+Sets the summary of the current B<job step>.
+
+    $stepResult->setJobStepSummary('All tests are ok in this step.');
+
+=back
+
+=cut
+
+sub setJobStepSummary {
+    my ($self, $summary) = @_;
+
+    if (!$summary) {
+        croak "Summary is mandatory in setJobStepSummary\n";
+    }
+
+    my $property = '/myJobStep/summary';
+    my $action = ECPDF::StepResult::Action->new({
+        actionType => 'setJobStepSummary',
+        entityName => $property,
+        entityValue => $self->setCacheForAction('setJobStepSummary', $property, $summary)
+    });
+    my $actions = $self->getActions();
+    push @$actions, $action;
+    return $self;
+}
+
+
+=over
+
+=item B<setJobSummary>
+
+Sets the summary of the current B<job>.
+
+    $stepResult->setJobSummary('All tests are ok');
+
+=back
+
+=cut
+
+sub setJobSummary {
+    my ($self, $summary) = @_;
+
+    if (!$summary) {
+        croak "Summary is mandatory in setJobStepSummary\n";
+    }
+
+    my $property = '/myCall/summary';
+    my $action = ECPDF::StepResult::Action->new({
+        actionType => 'setJobSummary',
+        entityName => $property,
+        entityValue => $self->setCacheForAction('setJobSummary', $property, $summary)
+    });
+    my $actions = $self->getActions();
+    push @$actions, $action;
+    return $self;
+}
+
+
+=over
+
+=item B<setOutcomeProperty>
+
+Sets the outcome property.
+
+    $stepResult->setOutcomeProperty('/myJob/buildNumber', '42');
+
+=back
+
+=cut
+
+
+sub setOutcomeProperty {
+    my ($self, $propertyPath, $propertyValue) = @_;
+
+    if (!$propertyPath || !$propertyValue) {
+        croak "PropertyPath and PropertyValue are mandatory";
+    }
+
+    my $action = ECPDF::StepResult::Action->new({
+        actionType => 'setOutcomeProperty',
+        entityName => $propertyPath,
+        entityValue => $propertyValue
+    });
+    my $actions = $self->getActions();
+    push @$actions, $action;
+    return $self;
+}
+
+
+=over
+
+=item B<apply>
+
+Applies scheduled changes without schedule cleanup in queue order: first scheduled, first executed.
+
+    $stepResult->apply();
+
+=back
+
+=cut
 
 sub apply {
     my ($self) = @_;
@@ -45,135 +259,24 @@ sub apply {
             croak "Action $currentAction is not implemented yet\n";
         }
     }
-    print Dumper $self->{actions};
-    print Dumper $self->{cache};
+    logTrace("Actions: ", Dumper $self->{actions});
+    logTrace("Actions cache: ", Dumper $self->{cache});
     return $self;
 
 }
 
 
-sub getCacheForAction {
-    my ($self, $actionType, $name, $value) = @_;
+=over
 
-    my $cache = $self->getCache();
-    if ($cache->{$actionType} && $cache->{$actionType}->{$name}) {
-        return $cache->{$actionType}->{$name};
-    }
-    return '';
-}
+=item B<flush>
 
-sub setCacheForAction {
-    my ($self, $actionType, $name, $value) = @_;
+Flushes scheduled actions.
 
-    print "Parameters for set cache: '$actionType', '$name', '$value'\n";
-    my $cache = $self->getCache();
-    my $line = $value;
-    if ($cache->{$actionType} && $cache->{$actionType}->{$name}) {
-        $line = sprintf("%s\n%s", $line, $value);
-    }
+    $stepResult->flush();
 
-    $cache->{$actionType}->{$name} = $line;
-    return $line;
-}
+=back
 
-sub setJobStepOutcome {
-    my ($self, $path, $outcome) = @_;
-
-    # if (!$path || !$outcome) {
-    #     croak "Path and outcome are mandatory for setOutcome function.\n";
-    # }
-    # If only one parameter has been provided, we're setting other parameters.
-    if ($path && !$outcome) {
-        $outcome = $path;
-        $path = '/myJobStep/outcome';
-    }
-    if ($outcome !~ m/^(?:error|warning|success)$/s) {
-        croak "Outcome is expected to be one of: error, warning, success. Got: $outcome\n";
-    }
-    my $action = ECPDF::StepResult::Action->new({
-        actionType  => 'setJobOutcome',
-        entityName  => $path,
-        entityValue => $outcome
-    });
-
-    my $actions = $self->getActions();
-    push @$actions, $action;
-    return $self;
-
-}
-
-
-sub setPipelineSummary {
-    my ($self, $pipelineProperty, $pipelineSummary) = @_;
-
-    if (!$pipelineProperty || !$pipelineSummary) {
-        croak "pipelineProperty and pipelineSummary are mandatory.\n";
-    }
-
-    my $action = ECPDF::StepResult::Action->new({
-        actionType  => 'setPipelineSummary',
-        entityName  => '/myPipelineStageRuntime/ec_summary/' . $pipelineProperty,
-        entityValue => $self->setCacheForAction('setPipelineSummary', $pipelineSummary)
-    });
-
-    my $actions = $self->getActions();
-    push @$actions, $action;
-    return $self;
-}
-
-
-sub setJobStepSummary {
-    my ($self, $summary) = @_;
-
-    if (!$summary) {
-        croak "Summary is mandatory in setJobStepSummary\n";
-    }
-
-    my $property = '/myJobStep/summary';
-    my $action = ECPDF::StepResult::Action->new({
-        actionType => 'setJobStepSummary',
-        entityName => $property,
-        entityValue => $self->setCacheForAction('setJobStepSummary', $property, $summary)
-    });
-    my $actions = $self->getActions();
-    push @$actions, $action;
-    return $self;
-}
-
-sub setJobSummary {
-    my ($self, $summary) = @_;
-
-    if (!$summary) {
-        croak "Summary is mandatory in setJobStepSummary\n";
-    }
-
-    my $property = '/myCall/summary';
-    my $action = ECPDF::StepResult::Action->new({
-        actionType => 'setJobSummary',
-        entityName => $property,
-        entityValue => $self->setCacheForAction('setJobSummary', $property, $summary)
-    });
-    my $actions = $self->getActions();
-    push @$actions, $action;
-    return $self;
-}
-
-sub setOutcomeProperty {
-    my ($self, $propertyPath, $propertyValue) = @_;
-
-    if (!$propertyPath || !$propertyValue) {
-        croak "PropertyPath and PropertyValue are mandatory";
-    }
-
-    my $action = ECPDF::StepResult::Action->new({
-        actionType => 'setOutcomeProperty',
-        entityName => $propertyPath,
-        entityValue => $propertyValue
-    });
-    my $actions = $self->getActions();
-    push @$actions, $action;
-    return $self;
-}
+=cut
 
 sub flush {
     my ($self) = @_;
@@ -186,6 +289,19 @@ sub flush {
 
     return \@clonedActions;
 }
+
+
+=over
+
+=item B<applyAndFlush>
+
+Executes the schedule queue and flushed it then.
+
+    $stepResult->applyAndFlush();
+
+=back
+
+=cut
 
 sub applyAndFlush {
     my ($self) = @_;

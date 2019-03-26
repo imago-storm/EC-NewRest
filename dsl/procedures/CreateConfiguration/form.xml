@@ -37,6 +37,23 @@
     <uncheckedValue>false</uncheckedValue>
     <initiallyChecked>1</initiallyChecked>
   </formElement>
+  <!-- here goes proxy setup -->
+    <formElement>
+        <type>entry</type>
+        <label>Proxy URL:</label>
+        <property>httpProxyUrl</property>
+        <required>0</required>
+        <documentation>Proxy url</documentation>
+    </formElement>
+    <formElement>
+        <type>credential</type>
+        <label>Proxy Credentials:</label>
+        <property>proxy_credential</property>
+        <required>0</required>
+        <documentation>Credentials to connect to proxy.</documentation>
+        <attachedAsParameterToStep>createAndAttachCredential</attachedAsParameterToStep>
+    </formElement>
+  <!-- End of proxy setup -->
   <formElement>
     <type>select</type>
     <property>debugLevel</property>
