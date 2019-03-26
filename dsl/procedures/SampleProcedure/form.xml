@@ -12,17 +12,17 @@ Please not not edit this file manually as it will be regenerated.
   </formElement>
   <formElement>
     <type>entry</type>
-    <property>applicationPath</property>
+    <property>targetUrl</property>
     <required>1</required>
-    <documentation>Path to the application</documentation>
+    <documentation>Url which should be fetched.</documentation>
     <label>Application Path</label>
   </formElement>
-  <formElement>
-    <type>checkbox</type>
-    <property>check</property>
-    <documentation>Some checkbox</documentation>
-    <label>Checkbox</label>
-    <checkedValue>true</checkedValue>
-    <uncheckedValue>false</uncheckedValue>
-  </formElement>
+  <!-- <formElement> -->
+  <!--   <type>checkbox</type> -->
+  <!--   <property>check</property> -->
+  <!--   <documentation>Some checkbox</documentation> -->
+  <!--   <label>Checkbox</label> -->
+  <!--   <checkedValue>true</checkedValue> -->
+  <!--   <uncheckedValue>false</uncheckedValue> -->
+  <!-- </formElement> -->
 </editor>

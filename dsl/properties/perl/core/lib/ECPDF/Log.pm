@@ -36,50 +36,50 @@ sub new {
 }
 
 sub logInfo {
-    return info(@_);
+    my @params = @_;
+    if (!ref $params[0]) {
+        unshift @params, __PACKAGE__->new();
+    }
+    return info(@params);
 }
 sub info {
     my ($self, @messages) = @_;
-
-    if (!ref $self) {
-        $self = __PACKAGE__->new();
-    }
     $self->_log(INFO, @messages);
 }
 
 sub logDebug {
-    return debug(@_);
+    my @params = @_;
+    if (!ref $params[0]) {
+        unshift @params, __PACKAGE__->new();
+    }
+    return debug(@params);
 }
 sub debug {
     my ($self, @messages) = @_;
-
-    if (!ref $self) {
-        $self = __PACKAGE__->new();
-    }
     $self->_log(DEBUG, '[DEBUG]', @messages);
 }
 
 sub logError {
-    return error(@_);
+    my @params = @_;
+    if (!ref $params[0]) {
+        unshift @params, __PACKAGE__->new();
+    }
+    return error(@params);
 }
 sub error {
     my ($self, @messages) = @_;
-
-    if (!ref $self) {
-        $self = __PACKAGE__->new();
-    }
     $self->_log(ERROR, '[ERROR]', @messages);
 }
 
 sub logTrace {
-    return trace(@_);
+    my @params = @_;
+    if (!ref $params[0]) {
+        unshift @params, __PACKAGE__->new();
+    }
+    return trace(@params);
 }
 sub trace {
     my ($self, @messages) = @_;
-
-    if (!ref $self) {
-        $self = __PACKAGE__->new();
-    }
     $self->_log(TRACE, '[TRACE]', @messages);
 }
 

@@ -1,10 +1,12 @@
 package ECPDF::Client::REST;
 use base qw/ECPDF::BaseClass/;
 use ECPDF::ComponentManager;
+use ECPDF::Log;
 use strict;
 use warnings;
 use LWP::UserAgent;
 use HTTP::Request;
+use Data::Dumper;
 
 sub classDefinition {
     return {
@@ -17,14 +19,18 @@ sub classDefinition {
 sub new {
     my ($class, $params) = @_;
 
+    logDebug("Creating ECPDF::Client::Rest with params: ", Dumper $params);
     if (!$params->{ua}) {
         $params->{ua} = LWP::UserAgent->new();
     }
     if ($params->{proxy}) {
-        my $proxy = ECPDF::ComponentManager->loadComponent('ECPDF::Component::Proxy', $params->{proxy})->init();
+        logDebug("Loading Proxy Component on demand.");
+        my $proxy = ECPDF::ComponentManager->loadComponent('ECPDF::Component::Proxy', $params->{proxy});
+        logDebug("Proxy component has been loaded.");
         $proxy->apply();
         $params->{ua} = $proxy->augment_lwp($params->{ua});
     }
+
     my $self = $class->SUPER::new($params);
     return $self;
 

@@ -1,8 +1,11 @@
 package ECPDF::ComponentManager;
 use strict;
 use warnings;
+
 use Data::Dumper;
 use Carp;
+
+use ECPDF::Log;
 
 our $COMPONENTS = {};
 
@@ -29,10 +32,15 @@ sub loadComponentLocal {
 sub loadComponent {
     my ($self, $component, $params) = @_;
 
+    logTrace("Loading component $component using params" . Dumper $params);
     eval "require $component";
+    logTrace("Importing component $component...");
     $component->import();
+    logTrace("Imported Ok");
 
+    logTrace("Initializing $component...");
     my $o = $component->init($params);
+    logTrace("Initialized Ok");
     $COMPONENTS->{$component} = $o;
     return $o;
 }

@@ -60,6 +60,8 @@ use base qw/ECPDF::BaseClass/;
 use strict;
 use warnings;
 use Carp;
+use Data::Dumper;
+use ECPDF::Log;
 
 our $VERSION = 0.02;
 our $componentName = 'ECPDF::Component::Proxy';
@@ -67,12 +69,14 @@ our $componentVersion = $VERSION;
 
 sub classDefinition {
     return {
-        componentInitParams => ''
+        componentInitParams => '*'
     };
 }
 
 sub init {
     my ($class, $params) = @_;
+
+    logDebug("TEST Class: $class, Params: " . Dumper $params);
     return $class->new($params);
 }
 

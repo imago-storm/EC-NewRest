@@ -13,13 +13,13 @@
     <documentation>Configuration description</documentation>
     <label>Description</label>
   </formElement>
-  <formElement>
-    <type>entry</type>
-    <property>endpoint</property>
-    <required>1</required>
-    <documentation>Third-party endpoint to connect to.</documentation>
-    <label>Endpoint</label>
-  </formElement>
+  <!-- <formElement> -->
+  <!--   <type>entry</type> -->
+  <!--   <property>endpoint</property> -->
+  <!--   <required>1</required> -->
+  <!--   <documentation>Third-party endpoint to connect to.</documentation> -->
+  <!--   <label>Endpoint</label> -->
+  <!-- </formElement> -->
   <formElement>
     <type>credential</type>
     <property>credential</property>
@@ -51,7 +51,7 @@
         <property>proxy_credential</property>
         <required>0</required>
         <documentation>Credentials to connect to proxy.</documentation>
-        <attachedAsParameterToStep>createAndAttachCredential</attachedAsParameterToStep>
+        <attachedAsParameterToStep>createConfiguration</attachedAsParameterToStep>
     </formElement>
   <!-- End of proxy setup -->
   <formElement>
